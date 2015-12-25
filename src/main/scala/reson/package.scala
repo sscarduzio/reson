@@ -1,6 +1,10 @@
-import com.twitter.finagle.Service
+import com.twitter.finagle.{SimpleFilter, Service}
 import com.twitter.finagle.http.{Status, Response, Request}
 import com.twitter.util.Future
+import com.twitter.finagle.http.Status._
+
+import rapture.json._
+import rapture.json.jsonBackends.argonaut._
 
 /**
   * Created by sscarduzio on 23/12/2015.
@@ -19,6 +23,28 @@ package object reson {
     resp.setContentTypeJson
     resp.contentString = str
     resp
+  }
+
+
+  case class AuthorizationFailure(msg:String) extends Exception
+
+  val exceptionHandlerFilter = new SimpleFilter[Request, Response] {
+    def apply(req: Request, service: Service[Request, Response]) = service(req) handle {
+      case af: AuthorizationFailure => {
+        val res = Response(Unauthorized)
+        res.setContentTypeJson
+        val cleanedMessage = json"""{"status": "Unauthorized", "cause": ${af.getMessage} }""".toString
+        res.setContentString(cleanedMessage)
+        af.printStackTrace
+        res
+      }
+      case e => {
+        e.printStackTrace
+        val res = Response(InternalServerError)
+        if (Option(e.getMessage).filter(!_.isEmpty).isDefined) res.setContentString(e.getMessage) else res.setContentString(e.getStackTraceString)
+        res
+      }
+    }
   }
 
 }

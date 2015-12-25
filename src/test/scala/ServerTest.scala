@@ -12,11 +12,12 @@ import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
 @RunWith(classOf[JUnitRunner])
 class ServerTest extends FunSuite with BeforeAndAfterEach {
-  sys.props("db_uri") = "mysql://root:@localhost:3306/tonno"
+  sys.props("db_uri") = "mysql://root:@localhost:3306/reson_it"
   test("GET Ok") {
     val responseFuture = Server.route(Request(Get, "/"))
     val response = Await.result(responseFuture)
 
     assert(response.status === Status.Ok)
+    assert(response.contentString == """{}""")
   }
 }

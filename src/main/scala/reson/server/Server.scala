@@ -18,7 +18,7 @@ object Server extends App {
     }
   }
 
-  Await.ready(Http.serve(":8080", new Service[Request, Response] {
+  Await.ready(Http.serve(":8080", exceptionHandlerFilter andThen new Service[Request, Response] {
     def apply(req: Request): Future[Response] = route(req)
   }))
 }

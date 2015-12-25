@@ -29,7 +29,6 @@ object MySQL extends MySQL2Json {
       maxWaiters = Int.MaxValue))
     .newRichClient(dbConf.hostAndPort.toString)
 
-
   def getTableList: Future[String] = {
     val jbListF =
       db.prepare(
@@ -57,8 +56,8 @@ object MySQL extends MySQL2Json {
       }.getOrElse(throw error) // We had the header, but no number could be parsed.
     }
 
-    val range = hmap.get("Range").map(mkRange).getOrElse((0,-1))
-    db.prepare(s"select * from $t limit ${range._1} ${range._2}").select(t)(Json(_))
+    val rangeSuffix = hmap.get("Range").map(mkRange).map(r => s"LIMIT ${r._1} , ${r._2}").getOrElse("")
+    db.prepare(s"SELECT * FROM $t $rangeSuffix").select(t)(Json(_))
       .map(q => Json(q).toString)
   }
 
