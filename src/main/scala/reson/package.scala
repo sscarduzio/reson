@@ -12,6 +12,8 @@ package object reson {
     }
   }
 
+  case class RequestNotSatisfiable(msg:String) extends Exception
+
   val mkResp: String => Response = { str =>
     val resp = Response(Status.Ok)
     resp.setContentTypeJson

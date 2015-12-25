@@ -1,9 +1,8 @@
-package reson
+package reson.db
 
 /**
   * Created by sscarduzio on 23/12/2015.
   */
-package tonno.api
 import java.util.TimeZone
 
 import com.twitter.finagle.exp.mysql._
