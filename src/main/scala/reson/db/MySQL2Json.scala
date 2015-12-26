@@ -31,11 +31,11 @@ trait MySQL2Json {
     case FloatValue(f) => s"""{"$key" : $f }"""
     case DoubleValue(d) => s"""{"$key" : $d}"""
     case BigDecimalValue(bd) => s"""{"$key" : ${bd.floatValue} }"""
-    case RawValue(typ, charset, isBynary, bytes) => {
+    case RawValue(typ, charset, isBinary, bytes) => {
       val parsed:String = typ match {
         case 12|7 => new TimestampValue(tz, tz).unapply(v).map(_.getTime.toString)
           .getOrElse(throw new ParsingException(s"cannot parse ~timestamp $v"))
-        case 10 =>  DateValue.unapply(RawValue(Type.Date,charset, isBynary,bytes)).map(_.getTime.toString)
+        case 10 =>  DateValue.unapply(RawValue(Type.Date,charset, isBinary,bytes)).map(_.getTime.toString)
           .getOrElse(throw new ParsingException(s"cannot parse ~date $v"))
         case _ =>  throw new ParsingException(s"""Unsupported column type: $typ for key: $key""")
       }
