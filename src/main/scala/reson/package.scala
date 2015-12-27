@@ -39,6 +39,7 @@ package object reson {
         res
       }
       case e => {
+        println(e.getMessage)
         e.printStackTrace
         val res = Response(InternalServerError)
         if (Option(e.getMessage).filter(!_.isEmpty).isDefined) res.setContentString(e.getMessage) else res.setContentString(e.getStackTraceString)

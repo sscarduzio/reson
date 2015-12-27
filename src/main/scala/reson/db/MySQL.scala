@@ -30,12 +30,19 @@ object MySQL extends MySQL2Json {
     .newRichClient(dbConf.hostAndPort.toString)
 
   def getTableList: Future[String] = {
-    val jbListF =
+    // Shitty bug in MySQL derived column return type
+    def fixBigintToBool(j: Json): Json = {
+      val jb = JsonBuffer(j)
+      jb.insertable = j.insertable.as[Int] == 1
+      Json(jb)
+    }
+    val jbListF: Future[Seq[Json]] =
       db.prepare(
-        """SELECT TABLE_SCHEMA as `schema`, TABLE_NAME as name, TABLE_TYPE='BASE TABLE' as insertable
+        """SELECT TABLE_SCHEMA as `schema`, TABLE_NAME as name, TABLE_TYPE = 'BASE TABLE' as insertable
           |FROM information_schema.tables
           |WHERE TABLE_SCHEMA = ? """.stripMargin)
         .select(dbConf.dbName)(Json(_))
+        .map(_.map(fixBigintToBool))
     jbListF.map(lj => Json(lj).toString)
   }
 
@@ -52,7 +59,7 @@ object MySQL extends MySQL2Json {
               (fst.toInt, s.drop(fst.length + 1).toInt)
             }
           }
-        }.filter(t => t._1  < t._2).getOrElse(throw error) // range length should be > 0 to be meaningful
+        }.filter(t => t._1 < t._2).getOrElse(throw error) // range length should be > 0 to be meaningful
       }.getOrElse(throw error) // We had the header, but no number could be parsed.
     }
 
