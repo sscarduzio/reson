@@ -8,6 +8,7 @@ import com.twitter.util.Future
 import rapture.json._
 import rapture.json.jsonBackends.argonaut._
 import reson.RequestNotSatisfiable
+import reson.server.Req2Query
 
 import scala.util.Try
 
@@ -47,25 +48,12 @@ object MySQL extends MySQL2Json {
   }
 
   def getTable(t: String, hmap: HeaderMap): Future[String] = {
-    if (!t.matches("^[a-zA-Z0-9_-]*$")) throw new Exception("no good table name")
-    def mkRange(s: String): (Int, Int) = {
-      lazy val error = new RequestNotSatisfiable("HTTP Range error")
-      Try {
-        Option(s).filter(_.matches("^(-)?([0-9]+)-(-)?([0-9]*)$")).map { _ =>
-          Option(s.takeWhile(_ != '-')).filter(!_.isEmpty) match {
-            case Some(fst) => (fst.toInt, (s.drop(fst.length + 1).toInt))
-            case None => {
-              val fst = '-' + s.tail.takeWhile(_ != '-')
-              (fst.toInt, s.drop(fst.length + 1).toInt)
-            }
-          }
-        }.filter(t => t._1 < t._2).getOrElse(throw error) // range length should be > 0 to be meaningful
-      }.getOrElse(throw error) // We had the header, but no number could be parsed.
-    }
-
-    val rangeSuffix = hmap.get("Range").map(mkRange).map(r => s"LIMIT ${r._1} , ${r._2}").getOrElse("")
+    val rangeSuffix = Req2Query.rangeSuffix(hmap)
     db.prepare(s"SELECT * FROM $t $rangeSuffix").select(t)(Json(_))
       .map(q => Json(q).toString)
   }
 
+  def read(query:String):Future[String] = {
+    db.select(query)(Json(_)).map(q => Json(q).toString)
+  }
 }
