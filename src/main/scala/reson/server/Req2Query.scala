@@ -11,7 +11,6 @@ import scala.util.Try
   */
 object Req2Query {
 
-
   def parse(req: Request, table: String): String = {
     val params = req.params.toMap
     val select = parseParam("select", params.get("select").getOrElse("*"))
@@ -36,8 +35,11 @@ object Req2Query {
   def rangeSuffix(hmap: HeaderMap) = {
     def mkRange(s: String): (Int, Int) = {
       lazy val error = new RequestNotSatisfiable("HTTP Range error")
-      Try {
-        Option(s).filter(_.matches("^(-)?([0-9]+)-(-)?([0-9]*)$")).map { _ =>
+      val parseAttempt = Try {
+
+        val wellFormed = Option(s).filter(_.matches("^(-)?([0-9]+)-(-)?([0-9]*)$"))
+
+        val parsed = wellFormed.map { _ =>
           Option(s.takeWhile(_ != '-')).filter(!_.isEmpty) match {
             case Some(fst) => (fst.toInt, (s.drop(fst.length + 1).toInt))
             case None => {
@@ -45,9 +47,12 @@ object Req2Query {
               (fst.toInt, s.drop(fst.length + 1).toInt)
             }
           }
-        }.filter(t => t._1 < t._2).getOrElse(throw error) // range length should be > 0 to be meaningful
-      }.getOrElse(throw error) // We had the header, but no number could be parsed.
+        }
+        parsed.filter(t => t._1 < t._2).getOrElse(throw error) // range length should be > 0 to be meaningful
+      }
+      parseAttempt.getOrElse(throw error) // We had the header, but no number could be parsed.
     }
+
     val range = hmap.get("Range").map(mkRange)
     range.map(r => s"LIMIT ${r._1} ,${r._2}").getOrElse("")
   }
