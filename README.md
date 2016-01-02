@@ -1,3 +1,4 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/grade/d0d150cb90df40db99b2863660c2399b)](https://www.codacy.com/app/scarduzio/reson)
 # Reson 
 
 Zero-configuration REST API for MySQL.
