@@ -67,6 +67,6 @@ class ServerTest extends FunSuite with BeforeAndAfterEach {
     val response = Await.result(responseFuture)
 
     assert(response.status === Status.Ok)
-    assert(Json.parse(response.contentString).as[List[Json]].head.schema.as[String] == "reson_it")
+    assert(Json.parse(response.contentString).as[List[Json]].headOption.map(_.schema.as[String] == "reson_it").getOrElse(false))
   }
 }

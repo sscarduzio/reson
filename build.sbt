@@ -17,3 +17,8 @@ packSettings
 packMain := Map(
   "server" -> "reson.Server"
 )
+
+wartremoverWarnings ++= Warts.all
+
+scapegoatVersion := "1.1.0"
+

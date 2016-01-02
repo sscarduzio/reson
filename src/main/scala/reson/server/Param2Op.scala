@@ -21,14 +21,10 @@ GET /people?order=age.desc.nullslast
   */
 
 
-sealed trait Op {
-  val key: String
-}
-sealed class NoOp(val key:String) extends Op {
+sealed trait Op
+
+case object NoOp extends Op {
   override def toString = ""
-}
-object Op {
-  val NoOp = new NoOp("")
 }
 
 trait Negable {
@@ -36,11 +32,11 @@ trait Negable {
   def isNot = if (not) " NOT " else " "
 }
 
-case class SingleOp(column: String, value: String, key: String) extends Op {
+final case class SingleOp(column: String, value: String, key: String) extends Op {
   override def toString = s"""$column $key '$value'"""
 }
 
-case class SingleNegableOp(column: String, not: Boolean, value: String, key: String) extends Op with Negable {
+final case class SingleNegableOp(column: String, not: Boolean, value: String, key: String) extends Op with Negable {
   override def toString = s"""$column $isNot $key '$value'"""
 }
 
@@ -48,18 +44,17 @@ class MultiOp(val key: String, values: Seq[String]) extends Op {
   override def toString = s""" $key ${values.map(x => s"'$x'").mkString(",")}"""
 }
 
-case class Order(values: Seq[String]) extends MultiOp("order", values) {
+final case class Order(values: Seq[String]) extends MultiOp("order", values) {
 
   // order=age.desc,height.asc
   // order=age.nullsfirst
   // order=age.desc.nullslast
-  case class Rule(col: String, desc: Boolean = false, asc: Boolean = false, nullsFirst: Boolean = false, nullsLast: Boolean = false) {
+  final case class Rule(col: String, desc: Boolean = false, asc: Boolean = false, nullsFirst: Boolean = false, nullsLast: Boolean = false) {
     if (desc && asc || nullsFirst && nullsLast) throw new Exception("invalid ordering rule")
 
     override def toString =
       s"""$col ${if (desc) "DESC" else ""}${if (asc) "ASC" else ""} """ +
         s"""${if (nullsFirst) "NULLS FIRST" else ""}${if (nullsLast) "NULLS LAST" else ""}"""
-
   }
 
   val rules = values.map { rule =>
@@ -74,14 +69,15 @@ case class Order(values: Seq[String]) extends MultiOp("order", values) {
   override def toString = "ORDER BY " + rules.mkString(", ")
 }
 
-case class InOp(column:String, value:String, not: Boolean) extends Op with Negable {
-  val key = ""
+final case class InOp(column:String, value:String, not: Boolean) extends Op with Negable {
   override def toString = s"""`$column`${isNot}IN """ + value.map(v => s"'$v'").mkString("(", ",", ")")
 }
-case class Select(value:String) extends Op {
-  val key = "SELECT"
+
+final case class Select(value:String) extends Op {
   override def toString = "SELECT " + value
 }
+
+// END OF ADT
 
 object Param2Op extends App {
 
@@ -89,6 +85,7 @@ object Param2Op extends App {
 
   def parseParam(key: String, value: String): Op = {
     def noNeg(n: Boolean) = if (n) throw new Exception("meaningless not")
+
     @tailrec
     def parse(key: String, values: Seq[String], not: Boolean): Op = {
       (key, values) match {

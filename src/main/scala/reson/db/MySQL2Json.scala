@@ -13,7 +13,7 @@ import rapture.json.jsonBackends.argonaut._
 /**
   * Created by sscarduzio on 22/12/2015.
   */
-case class ParsingException(msg:String)extends Exception
+final case class ParsingException(msg:String)extends Exception
 
 trait MySQL2Json {
 

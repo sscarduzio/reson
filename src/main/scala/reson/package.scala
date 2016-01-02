@@ -16,7 +16,7 @@ package object reson {
     }
   }
 
-  case class RequestNotSatisfiable(msg:String) extends Exception
+  final case class RequestNotSatisfiable(msg:String) extends Exception
 
   val mkResp: String => Response = { str =>
     val resp = Response(Status.Ok)
@@ -26,7 +26,7 @@ package object reson {
   }
 
 
-  case class AuthorizationFailure(msg:String) extends Exception
+  final case class AuthorizationFailure(msg:String) extends Exception
 
   val exceptionHandlerFilter = new SimpleFilter[Request, Response] {
     def apply(req: Request, service: Service[Request, Response]) = service(req) handle {

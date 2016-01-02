@@ -1,7 +1,8 @@
 package reson.server
 
 import com.twitter.finagle.http.{HeaderMap, Request}
-import reson.{RequestNotSatisfiable, Op}
+import reson.Param2Op._
+import reson.{NoOp, RequestNotSatisfiable}
 
 import scala.util.Try
 
@@ -10,12 +11,11 @@ import scala.util.Try
   */
 object Req2Query {
 
-  import reson.Param2Op._
 
   def parse(req: Request, table: String): String = {
     val params = req.params.toMap
     val select = parseParam("select", params.get("select").getOrElse("*"))
-    val order = params.get("order").map(parseParam("order", _)).getOrElse(Op.NoOp)
+    val order = params.get("order").map(parseParam("order", _)).getOrElse(NoOp)
     val restOfOps = params.filter(v => v._1 != "select" && v._1 != "order").map(parseParam)
     val qs: Set[String] =
       Set(select.toString + s" from $table") ++
