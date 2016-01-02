@@ -2,7 +2,7 @@ package reson.server
 
 import com.twitter.finagle.http.{HeaderMap, Request}
 import reson.Param2Op._
-import reson.{NoOp, RequestNotSatisfiable}
+import reson.{Op, NoOp, RequestNotSatisfiable}
 
 import scala.util.Try
 
@@ -16,12 +16,18 @@ object Req2Query {
     val params = req.params.toMap
     val select = parseParam("select", params.get("select").getOrElse("*"))
     val order = params.get("order").map(parseParam("order", _)).getOrElse(NoOp)
-    val restOfOps = params.filter(v => v._1 != "select" && v._1 != "order").map(parseParam)
+    val restOfOps: Set[Op] = {
+      val pars = params.filter(v => v._1 != "select" && v._1 != "order")
+      val ops = pars.map(parseParam)
+      Option(ops.toSet).filter(!_.isEmpty).getOrElse(Set())
+    }
     val qs: Set[String] =
-      Set(select.toString + s" from $table") ++
-        Set(Option(restOfOps).filter(!_.isEmpty).map(_.map(_.toString)).map(_.mkString("WHERE 1 AND ", "AND ", "")).getOrElse("")) ++
-        Set(rangeSuffix(req.headerMap)) ++
-        Set(order.toString)
+      Set(
+        select.toString + s" from $table",
+        restOfOps.map(_.toString).mkString("WHERE 1 AND ", "AND ", ""),
+        rangeSuffix(req.headerMap),
+        order.toString
+      )
     val q = qs.mkString("", " ", ";")
     println(q)
     q
