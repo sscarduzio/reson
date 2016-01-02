@@ -27,7 +27,7 @@ case object NoOp extends Op {
   override def toString = ""
 }
 
-trait Negable {
+trait Negatable {
   val not: Boolean
   def isNot = if (not) " NOT " else " "
 }
@@ -36,7 +36,7 @@ final case class SingleOp(column: String, value: String, key: String) extends Op
   override def toString = s"""$column $key '$value'"""
 }
 
-final case class SingleNegableOp(column: String, not: Boolean, value: String, key: String) extends Op with Negable {
+final case class SingleNegatableOp(column: String, not: Boolean, value: String, key: String) extends Op with Negatable {
   override def toString = s"""$column $isNot $key '$value'"""
 }
 
@@ -69,7 +69,7 @@ final case class Order(values: Seq[String]) extends MultiOp("order", values) {
   override def toString = "ORDER BY " + rules.mkString(", ")
 }
 
-final case class InOp(column:String, value:String, not: Boolean) extends Op with Negable {
+final case class InOp(column:String, value:String, not: Boolean) extends Op with Negatable {
   override def toString = s"""`$column`${isNot}IN """ + value.map(v => s"'$v'").mkString("(", ",", ")")
 }
 
@@ -98,7 +98,7 @@ object Param2Op extends App {
         case (col, "gte" :: v) => noNeg(not); SingleOp(col, v.head, ">=")
         case (col, "lt" :: v) => noNeg(not); SingleOp(col, v.head, "<")
         case (col, "lte" :: v) => SingleOp(col, v.head, "<=")
-        case (col, "like" :: v) => SingleNegableOp(col, not, v.head, "LIKE")
+        case (col, "like" :: v) => SingleNegatableOp(col, not, v.head, "LIKE")
         case (x, y) => throw new Exception(s"nothing matched key=$key, value=$value")
       }
     }

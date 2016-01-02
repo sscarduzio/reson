@@ -42,6 +42,7 @@ object Req2Query {
         }.filter(t => t._1 < t._2).getOrElse(throw error) // range length should be > 0 to be meaningful
       }.getOrElse(throw error) // We had the header, but no number could be parsed.
     }
-    hmap.get("Range").map(mkRange).map(r => s"LIMIT ${r._1} ,${r._2}").getOrElse("")
+    val range = hmap.get("Range").map(mkRange)
+    range.map(r => s"LIMIT ${r._1} ,${r._2}").getOrElse("")
   }
 }
