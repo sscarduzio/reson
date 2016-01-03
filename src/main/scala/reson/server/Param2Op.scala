@@ -3,14 +3,14 @@ package reson
 import scala.annotation.tailrec
 
 /**
-GET /people?select=age,height,weight
-GET /people?age=gte.18&student=is.true
-GET /people?age=lt.13
-GET /people?age=not.eq.2
-GET /people?order=age.desc,height.asc
-GET /people?order=age
-GET /people?order=age.nullsfirst
-GET /people?order=age.desc.nullslast
+  GET /people?select=age,height,weight
+  GET /people?age=gte.18&student=is.true
+  GET /people?age=lt.13
+  GET /people?age=not.eq.2
+  GET /people?order=age.desc,height.asc
+  GET /people?order=age
+  GET /people?order=age.nullsfirst
+  GET /people?order=age.desc.nullslast
 
   * if path is null, don't parse params.
 
@@ -21,7 +21,9 @@ GET /people?order=age.desc.nullslast
   */
 
 
-sealed trait Op
+sealed trait Op {
+  override def toString = "__unimplemented__"
+}
 
 case object NoOp extends Op {
   override def toString = ""
@@ -36,14 +38,20 @@ final case class SingleOp(column: String, value: String, key: String) extends Op
   override def toString = s"""$column $key '$value'"""
 }
 
-final case class SingleNegatableOp(column: String, not: Boolean, value: String, key: String) extends Op with Negatable {
+class SingleNegatableOp(column: String, val not: Boolean, value: String, key: String) extends Op with Negatable {
   override def toString = s"""$column $isNot $key '$value'"""
 }
 
 class MultiOp(val key: String, values: Seq[String]) extends Op {
   override def toString = s""" $key ${values.map(x => s"'$x'").mkString(",")}"""
 }
+final case class Like(column:String, override val not:Boolean, value:String) extends SingleNegatableOp(column, not, value, "LIKE") {
+ override def toString = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
+}
 
+final case class ILike(column:String, override val not:Boolean, value:String) extends SingleNegatableOp(column, not, value, "COLLATE UTF8_GENERAL_CI LIKE") {
+  override def toString = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
+}
 final case class Order(values: Seq[String]) extends MultiOp("order", values) {
 
   // order=age.desc,height.asc
@@ -98,7 +106,8 @@ object Param2Op extends App {
         case (col, "gte" :: v) => noNeg(not); SingleOp(col, v.head, ">=")
         case (col, "lt" :: v) => noNeg(not); SingleOp(col, v.head, "<")
         case (col, "lte" :: v) => SingleOp(col, v.head, "<=")
-        case (col, "like" :: v) => SingleNegatableOp(col, not, v.head, "LIKE")
+        case (col, "like" :: v) => Like(col, not, v.head)
+        case (col, "ilike" :: v) => ILike(col, not, v.head)
         case (x, y) => throw new Exception(s"nothing matched key=$key, value=$value")
       }
     }
@@ -111,6 +120,7 @@ object Param2Op extends App {
   testPar("col1=gt.2")
   testPar("col1=gt.2")
   testPar("col1=not.like.xxx*y")
+  testPar("col3=not.ilike.xxx*y")
   testPar("order=col1")
   testPar("order=col1.nullsfirst")
   testPar("order=col1.desc.nullsfirst,col2.asc")
