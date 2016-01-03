@@ -21,7 +21,7 @@ package object reson {
   val mkResp: String => Response = { str =>
     val resp = Response(Status.Ok)
     resp.setContentTypeJson
-    resp.contentString = str
+    resp.contentString = Option(str).filter(!_.isEmpty).getOrElse("{}")
     resp
   }
 
