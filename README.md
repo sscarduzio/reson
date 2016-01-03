@@ -2,9 +2,8 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/grade/d0d150cb90df40db99b2863660c2399b)](https://www.codacy.com/app/scarduzio/reson)
 # Reson
 Bridging **RE**lational databases to J**SON** based (REST) APIs.
-![Imgur](http://i.imgur.com/IYXObqn.jpg)
 
-Zero-configuration REST API for MySQL.
+> Reson infers a REST API from any MySQL database schema.
 Basically a clone of [PostgREST](https://github.com/begriffs/postgrest), but for MySQL.
 
 ## Status of the project
