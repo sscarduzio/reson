@@ -15,7 +15,9 @@ object Server extends App {
   lazy val route = toService { req =>
     (req.method, Path(req.path)) match {
       case (Get, Root) => MySQL.getTableList.map(mkResp)
-      case (Get, Root / (table: String)) => MySQL.read(Req2Query.parse(req, table)).map(mkResp)
+      case (Get, Root / (table: String)) => MySQL.read(Req2Query.parseReadRequest(req, table)).map(mkResp)
+      case (Post, Root / (table:String)) => MySQL.write(Req2Query.parseInsertRequest(req,table)).map(mkResp)
+      case (Patch, Root / (table:String)) => MySQL.write(Req2Query.parseUpdateRequest(req,table)).map(mkResp)
     }
   }
 

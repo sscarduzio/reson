@@ -3,6 +3,7 @@ package reson.db
 import com.twitter.conversions.time._
 import com.twitter.finagle.client.DefaultPool
 import com.twitter.finagle.exp.Mysql
+import com.twitter.finagle.exp.mysql.{OK, Error}
 import com.twitter.finagle.http.HeaderMap
 import com.twitter.util.Future
 import rapture.json._
@@ -53,7 +54,16 @@ object MySQL extends MySQL2Json {
       .map(q => Json(q).toString)
   }
 
-  def read(query:String):Future[String] = {
+  def read(query: String): Future[String] = {
     db.select(query)(Json(_)).map(q => Json(q).toString)
+  }
+
+  def write(query: String): Future[String] = {
+    db.query(query).flatMap {
+      _ match {
+        case r: OK => Future("")
+        case e: Error => Future.exception[String](new Exception( json"""{"code": ${e.code}, "message": ${e.message}, "details": ${e.sqlState}, "hint": null }""".toString))
+      }
+    }
   }
 }
