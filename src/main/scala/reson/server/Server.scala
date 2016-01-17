@@ -6,18 +6,26 @@ import com.twitter.finagle.http.path._
 import com.twitter.finagle.{Http, Service}
 import com.twitter.util.{Await, Future}
 import reson.db.MySQL
-import reson.server.Req2Query
+import reson.server.{RequestParser}
+import util.Transformers._
 
 /**
   * Created by sscarduzio on 23/12/2015.
   */
 object Server extends App {
-  lazy val route = toService { req =>
+  def handle(req: Request, table: String, f: String => Future[String]): Future[Response] = {
+    for {
+      query <- RequestParser.parse(req, table).future
+      qString <- query.materialize.future
+      dbResp <- f(qString)
+    } yield mkResp(dbResp)
+  }
+
+  lazy val route = Service.mk[Request, Response] { req =>
     (req.method, Path(req.path)) match {
       case (Get, Root) => MySQL.getTableList.map(mkResp)
-      case (Get, Root / (table: String)) => MySQL.read(Req2Query.parseReadRequest(req, table)).map(mkResp)
-      case (Post, Root / (table:String)) => MySQL.write(Req2Query.parseInsertRequest(req,table)).map(mkResp)
-      case (Patch, Root / (table:String)) => MySQL.write(Req2Query.parseUpdateRequest(req,table)).map(mkResp)
+      case (Get, Root / (table: String)) => handle(req, table, MySQL.read)
+      case (_, Root / (table: String)) => handle(req, table, MySQL.write)
     }
   }
 

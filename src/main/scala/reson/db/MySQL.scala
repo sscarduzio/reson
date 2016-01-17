@@ -4,14 +4,9 @@ import com.twitter.conversions.time._
 import com.twitter.finagle.client.DefaultPool
 import com.twitter.finagle.exp.Mysql
 import com.twitter.finagle.exp.mysql.{OK, Error}
-import com.twitter.finagle.http.HeaderMap
 import com.twitter.util.Future
 import rapture.json._
 import rapture.json.jsonBackends.argonaut._
-import reson.RequestNotSatisfiable
-import reson.server.Req2Query
-
-import scala.util.Try
 
 /**
   * Created by sscarduzio on 23/12/2015.
@@ -48,22 +43,20 @@ object MySQL extends MySQL2Json {
     jbListF.map(lj => Json(lj).toString)
   }
 
-  def getTable(t: String, hmap: HeaderMap): Future[String] = {
-    val rangeSuffix = Req2Query.rangeSuffix(hmap)
-    db.prepare(s"SELECT * FROM $t $rangeSuffix").select(t)(Json(_))
-      .map(q => Json(q).toString)
-  }
-
   def read(query: String): Future[String] = {
+    println(s"READ: $query")
     db.select(query)(Json(_)).map(q => Json(q).toString)
   }
 
   def write(query: String): Future[String] = {
+    println(s"WRITE: $query")
     db.query(query).flatMap {
       _ match {
         case r: OK => Future("")
         case e: Error => Future.exception[String](new Exception( json"""{"code": ${e.code}, "message": ${e.message}, "details": ${e.sqlState}, "hint": null }""".toString))
+        case err => Future.exception(new Exception(err.toString))
       }
     }
   }
+
 }

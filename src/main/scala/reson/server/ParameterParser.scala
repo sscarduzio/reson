@@ -45,6 +45,7 @@ class SingleNegatableOp(column: String, val not: Boolean, value: String, key: St
 class MultiOp(val key: String, values: Seq[String]) extends Op {
   override def toString = s""" $key ${values.map(x => s"'$x'").mkString(",")}"""
 }
+
 final case class Like(column:String, override val not:Boolean, value:String) extends SingleNegatableOp(column, not, value, "LIKE") {
  override def toString = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
 }
@@ -52,6 +53,7 @@ final case class Like(column:String, override val not:Boolean, value:String) ext
 final case class ILike(column:String, override val not:Boolean, value:String) extends SingleNegatableOp(column, not, value, "COLLATE UTF8_GENERAL_CI LIKE") {
   override def toString = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
 }
+
 final case class Order(values: Seq[String]) extends MultiOp("order", values) {
 
   // order=age.desc,height.asc
@@ -87,7 +89,7 @@ final case class Select(value:String) extends Op {
 
 // END OF ADT
 
-object Param2Op extends App {
+object ParameterParser {
 
   def parseParam(kv: (String, String)): Op = parseParam(kv._1, kv._2)
 
@@ -113,18 +115,4 @@ object Param2Op extends App {
     }
     parse(key, value.split("\\.").toList, false)
   }
-
-  def testPar(str: String) = println(s"$str => " + parseParam(str.split("=")(0), str.split("=")(1)))
-
-  testPar("col1=not.in.2,3")
-  testPar("col1=gt.2")
-  testPar("col1=gt.2")
-  testPar("col1=not.like.xxx*y")
-  testPar("col3=not.ilike.xxx*y")
-  testPar("order=col1")
-  testPar("order=col1.nullsfirst")
-  testPar("order=col1.desc.nullsfirst,col2.asc")
-  val ex = Map("col1" -> "gt.1", "col2" -> "like.eee")
-  val select = parseParam("select", ex.get("select").getOrElse("*"))
-  val order = ex.get("order").map(parseParam("order", _))
 }
