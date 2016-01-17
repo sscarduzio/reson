@@ -23,7 +23,7 @@ object Server extends App {
 
   lazy val route = Service.mk[Request, Response] { req =>
     (req.method, Path(req.path)) match {
-      case (Get, Root) => MySQL.getTableList.map(mkResp)
+      case (Get, Root) => MySQL.tableList.map(mkResp)
       case (Get, Root / (table: String)) => handle(req, table, MySQL.read)
       case (_, Root / (table: String)) => handle(req, table, MySQL.write)
     }

@@ -26,7 +26,7 @@ object MySQL extends MySQL2Json {
       maxWaiters = Int.MaxValue))
     .newRichClient(dbConf.hostAndPort.toString)
 
-  def getTableList: Future[String] = {
+  def tableList: Future[String] = {
     // Shitty bug in MySQL derived column return type
     def fixBigintToBool(j: Json): Json = {
       val jb = JsonBuffer(j)

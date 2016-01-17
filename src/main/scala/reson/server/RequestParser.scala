@@ -5,9 +5,10 @@ import com.twitter.finagle.http.{HeaderMap, Request}
 import rapture.data.GeneralExtractors
 import rapture.json._
 import rapture.json.jsonBackends.argonaut._
-import reson.server.Query.{Ops, DataRow}
-import reson._
 import reson.ParameterParser._
+import reson._
+import reson.server.Query.{DataRow, Ops}
+
 import scala.collection.immutable.Iterable
 import scala.util.{Failure, Try}
 
@@ -24,8 +25,7 @@ trait Query {
 
 trait Where {
   val where: Iterable[_ <: Op]
-
-  def formatWhere: String = if (where.isEmpty) "" else where.map(_.toString).mkString("WHERE 1 AND ", " AND ", "")
+  lazy val whereString = if (where.isEmpty) "" else where.map(_.toString).mkString("WHERE 1 AND ", " AND ", "")
 }
 
 case class UpdateQ(table: String, rows: List[DataRow], where: Ops) extends Query with Where {
@@ -33,10 +33,10 @@ case class UpdateQ(table: String, rows: List[DataRow], where: Ops) extends Query
     for {
       r <- Option(rows).filter(!_.isEmpty).map(Try(_)).getOrElse(Failure(new Exception("No rows provided"))) // SHOULD return immediately if rows is empty
       rowList <- Try(rows).filter(_.size == 1).orElse(Failure(new Exception("You should provide just one object")))
-      singleRow = rowList.head
+      singleRow <- rowList.headOption.map(Try(_)).getOrElse(Failure(new Exception)) // Never fails
       fieldsEqValues = singleRow.map(kv => s"${kv._1}='${kv._2}'")
     } yield
-      s"""UPDATE $table SET ${fieldsEqValues.mkString(", ")} $formatWhere"""
+      s"""UPDATE $table SET ${fieldsEqValues.mkString(", ")} $whereString"""
   }
 }
 
@@ -55,14 +55,14 @@ case class InsertQ(table: String, rows: List[DataRow]) extends Query {
 
 case class DeleteQ(table: String, where: Ops) extends Query with Where {
   def materialize = {
-    val opt = Option(where).filter(!_.isEmpty).map(wh => s"""DELETE FROM $table ${formatWhere}""")
+    val opt = Option(where).filter(!_.isEmpty).map(wh => s"""DELETE FROM $table ${whereString}""")
     opt.map(Try(_)).getOrElse(Failure(new Exception("cannot build Delete query")))
   }
 }
 
 case class SelectQ(table: String, select: String, where: Ops, order: Option[Order], limit: Option[(Int, Int)]) extends Query with Where {
   def materialize = Try {
-    s"""SELECT $select from $table ${formatWhere} $formatOrder $formatLimit"""
+    s"""SELECT $select from $table ${whereString} $formatOrder $formatLimit"""
   }
 
   def formatOrder = order.map(_.toString).getOrElse("")
