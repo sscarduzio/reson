@@ -15,8 +15,8 @@ import util.Transformers._
 object Server extends App {
   def handle(req: Request, table: String, f: String => Future[String]): Future[Response] = {
     for {
-      query <- RequestParser.parse(req, table).future
-      qString <- query.materialize.future
+      query <- RequestParser.parse(req, table).toFuture
+      qString <- query.materialize.toFuture
       dbResp <- f(qString)
     } yield mkResp(dbResp)
   }
