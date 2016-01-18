@@ -54,7 +54,7 @@ object Transformers {
   // Don't use this to await, only completed futures will work!
   implicit class TransformableFuture[T](val theFuture: Future[T]) {
     def toTry: Try[T] = Try {
-      assert(theFuture.isDone)
+      assert(theFuture.isDefined)
       Await.result(theFuture, Duration.Bottom)
     }
   }
