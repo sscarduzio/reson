@@ -1,6 +1,6 @@
 package reson.util
 
-import com.twitter.util.{Promise, Future}
+import com.twitter.util.{Duration, Await, Promise, Future}
 import scala.util.{Failure, Success, Try}
 
 
@@ -11,12 +11,10 @@ import scala.util.{Failure, Success, Try}
 object Transformers {
 
   implicit class TransformableTry[T](val theTry: Try[T]) {
-    def future[T] = tryToFuture(theTry)
-
-    def tryToFuture[T](theTry: Try[T]): Future[T] = {
+    def toFuture: Future[T] = {
       val promise = new Promise[T]
       theTry match {
-        case Success(v) => promise.setValue(v)
+        case Success(v: T) => promise.setValue(v)
         case Failure(e) => promise.setException(e)
       }
       promise
@@ -25,13 +23,39 @@ object Transformers {
 
   implicit class TransformableOption[T](val theOpt: Option[T]) {
 
-    def future[T](theOpt: Option[T], e: Exception = new Exception("option to future transformer found None")): Future[T] = {
+    def toFuture(e: Exception = new Exception("option to future transformer found None")): Future[T] = {
       val promise = new Promise[T]
       theOpt match {
-        case Some(s) => promise.setValue(s)
-        case None => promise.setException(e)
+        case Some(s: T) => promise.setValue(s)
+        case _ => promise.setException(e)
       }
       promise
+    }
+
+    def toTry(e: Exception = new Exception("option to try transformer found None")): Try[T] = {
+      theOpt match {
+        case Some(v: T) => Success(v)
+        case _ => Failure(e)
+      }
+    }
+  }
+
+  implicit class TransformableEither[T](val theEither: Either[Exception, T]) {
+    def toFuture: Future[T] = {
+      val promise = new Promise[T]
+      theEither match {
+        case Right(s: T) => promise.setValue(s)
+        case Left(e: Exception) => promise.setException(e)
+      }
+      promise
+    }
+  }
+
+  // Don't use this to await, only completed futures will work!
+  implicit class TransformableFuture[T](val theFuture: Future[T]) {
+    def toTry: Try[T] = Try {
+      assert(theFuture.isDone)
+      Await.result(theFuture, Duration.Bottom)
     }
   }
 
