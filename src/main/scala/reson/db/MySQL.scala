@@ -52,7 +52,7 @@ object MySQL extends MySQL2Json {
     println(s"WRITE: $query")
     db.query(query).flatMap {
       _ match {
-        case r: OK => Future.value(json"""{ "status": "OK","affected_rows": ${r.affectedRows}""".toString)
+        case r: OK => Future.value(json"""{ "status": "OK","affected_rows": ${r.affectedRows}}""".toString)
         case e: Error => Future.exception[String](new Exception( json"""{"code": ${e.code}, "message": ${e.message}, "details": ${e.sqlState}, "hint": null }""".toString))
         case err => Future.exception(new Exception(err.toString))
       }
