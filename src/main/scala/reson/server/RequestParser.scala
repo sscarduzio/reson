@@ -7,11 +7,13 @@ import rapture.json._
 import rapture.json.jsonBackends.argonaut._
 import reson.ParameterParser._
 import reson._
+import reson.db.MySQL
 import reson.server.Query.{DataRow, Ops}
 
 import scala.collection.immutable.Iterable
 import scala.util.{Failure, Try}
 
+import reson.util.Transformers._
 
 /**
   * Created by sscarduzio on 11/01/2016.
@@ -19,8 +21,11 @@ import scala.util.{Failure, Try}
 
 //////// ADT
 trait Query {
-  val table: String
   def materialize: Try[String]
+}
+
+trait TableQuery extends Query {
+  val table: String
 }
 
 trait Where {
@@ -28,39 +33,46 @@ trait Where {
   lazy val whereString = if (where.isEmpty) "" else where.map(_.toString).mkString("WHERE 1 AND ", " AND ", "")
 }
 
-case class UpdateQ(table: String, rows: List[DataRow], where: Ops) extends Query with Where {
+class TableListQ extends Query {
+  def materialize = Try {
+    s"""SELECT TABLE_SCHEMA as `schema`, TABLE_NAME as name, TABLE_TYPE = 'BASE TABLE' as insertable
+        |FROM information_schema.tables
+        |WHERE TABLE_SCHEMA = ${MySQL.dbConf.dbName} """
+      .stripMargin
+  }
+}
+
+case class UpdateQ(table: String, rows: List[DataRow], where: Ops) extends TableQuery with Where {
   def materialize = {
     for {
-      r <- Option(rows).filter(!_.isEmpty).map(Try(_)).getOrElse(Failure(new Exception("No rows provided"))) // SHOULD return immediately if rows is empty
-      rowList <- Try(rows).filter(_.size == 1).orElse(Failure(new Exception("You should provide just one object")))
-      singleRow <- rowList.headOption.map(Try(_)).getOrElse(Failure(new Exception)) // Never fails
+      r <- Option(rows).filter(!_.isEmpty).toTry(new Exception("No rows provided")) // SHOULD return immediately if rows is empty
+      rowList <- Either.cond(r.size == 1, rows, new Exception("You should provide just one object")).toTry
+      singleRow <- rowList.headOption.toTry() // Never fails
       fieldsEqValues = singleRow.map(kv => s"${kv._1}='${kv._2}'")
     } yield
       s"""UPDATE $table SET ${fieldsEqValues.mkString(", ")} $whereString"""
   }
 }
 
-case class InsertQ(table: String, rows: List[DataRow]) extends Query {
+case class InsertQ(table: String, rows: List[DataRow]) extends TableQuery {
 
   import Query._
 
   def materialize = {
-    val opt = for {
-      (fields, values) <- toFieldsAndValues(rows)
+    for {
+      (fields, values) <- toFieldsAndValues(rows).toTry(new Exception("Error parsing fields and values"))
     } yield s"INSERT INTO $table " + fields.mkString("(", ",", ")") + " VALUES " + values.map(_.map(fixQuotes).mkString("(", ",", ") ")).mkString(",")
-    opt.map(Try(_)).getOrElse(Failure(new Exception("cannot build Insert query")))
   }
-
 }
 
-case class DeleteQ(table: String, where: Ops) extends Query with Where {
+case class DeleteQ(table: String, where: Ops) extends TableQuery with Where {
   def materialize = {
-    val opt = Option(where).filter(!_.isEmpty).map(wh => s"""DELETE FROM $table ${whereString}""")
-    opt.map(Try(_)).getOrElse(Failure(new Exception("cannot build Delete query")))
+     Option(where).filter(!_.isEmpty).map(wh => s"""DELETE FROM $table ${whereString}""")
+      .toTry(new Exception("a where clause is needed for deletion (you need to be more explicit if you really intend to delete everything!)"))
   }
 }
 
-case class SelectQ(table: String, select: String, where: Ops, order: Option[Order], limit: Option[(Int, Int)]) extends Query with Where {
+case class SelectQ(table: String, select: String, where: Ops, order: Option[Order], limit: Option[(Int, Int)]) extends TableQuery with Where {
   def materialize = Try {
     s"""SELECT $select from $table ${whereString} $formatOrder $formatLimit"""
   }
@@ -91,8 +103,7 @@ object Query {
     if (whereOps.isEmpty) "" else whereOps.map(_.toString).mkString("WHERE 1 AND ", " AND ", "")
   }
 
-  val fixQuotes: String => String = v => "'" + v + "'"
-
+  val fixQuotes: String => String = v => s"'$v'"
 
 }
 
@@ -107,7 +118,7 @@ object RequestParser {
       val jRows = if (jo.is[List[Json]]) jo.as[List[Json]] else List(jo.as[Json])
       jRows.map(_.as[Map[String, Json]]
         // When a Json is a string type, it's toString method returns the field in double quotes, unless we extract it properly as string
-        .map(kv => kv._1 -> (if(kv._2.is[String]) kv._2.as[String] else kv._2.toString)))
+        .map(kv => kv._1 -> (if (kv._2.is[String]) kv._2.as[String] else kv._2.toString)))
     }
 
     lazy val paramOps: Ops = {
@@ -130,6 +141,7 @@ object RequestParser {
       }
       case Post => Try(InsertQ(table, rows))
       case Patch => Try(UpdateQ(table, rows, paramOps))
+      case Delete => Try(DeleteQ(table, paramOps))
       case _ => Failure(new Exception("Cannot parse request"))
     }
   }
