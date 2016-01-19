@@ -8,12 +8,11 @@ import rapture.json.jsonBackends.argonaut._
 import reson.ParameterParser._
 import reson._
 import reson.db.MySQL
-import reson.server.Query.{DataRow, Ops}
+import reson.server.Query._
+import reson.util.Transformers._
 
 import scala.collection.immutable.Iterable
 import scala.util.{Failure, Try}
-
-import reson.util.Transformers._
 
 /**
   * Created by sscarduzio on 11/01/2016.
@@ -55,8 +54,6 @@ case class UpdateQ(table: String, rows: List[DataRow], where: Ops) extends Table
 }
 
 case class InsertQ(table: String, rows: List[DataRow]) extends TableQuery {
-
-  import Query._
 
   def materialize = {
     for {
