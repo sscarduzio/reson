@@ -49,12 +49,19 @@ object Transformers {
       }
       promise
     }
+
+    def toTry: Try[T] = {
+      theEither match {
+        case Right(s:T) => Success(s)
+        case Left(e:Exception) => Failure(e)
+      }
+    }
   }
 
   // Don't use this to await, only completed futures will work!
   implicit class TransformableFuture[T](val theFuture: Future[T]) {
     def toTry: Try[T] = Try {
-      assert(theFuture.isDefined)
+      assert(theFuture.isDefined, "should transform only materialized futures")
       Await.result(theFuture, Duration.Bottom)
     }
   }
