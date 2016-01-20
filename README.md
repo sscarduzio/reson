@@ -24,11 +24,12 @@ Please refer to the following bullet points to see what is implemented.
 
 ## Write API
 
-* Unknown schema Json body -> SQL Insert
-* Single Object POST Insert 
-* Array POST Insert
-* Make it work with PATCH
-* Deletion Query (using the Read API)
+* ✓ Unknown schema Json body -> SQL Insert
+* ✓ Insert Query (single object) 
+*   Insert Query (array of objects)
+*   Insert Query (CSV)
+* ✓ Make it work with PATCH
+* ✓ Deletion Query
 
 ## Authentication
 
