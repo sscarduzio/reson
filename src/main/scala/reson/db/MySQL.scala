@@ -6,7 +6,7 @@ import com.twitter.finagle.exp.Mysql
 import com.twitter.finagle.exp.mysql.{OK, Error}
 import com.twitter.util.Future
 import rapture.json._
-import rapture.json.jsonBackends.argonaut._
+import rapture.json.jsonBackends.jackson._
 
 /**
   * Created by sscarduzio on 23/12/2015.
@@ -29,9 +29,8 @@ object MySQL extends MySQL2Json {
   def tableList: Future[String] = {
     // Shitty bug in MySQL derived column return type
     def fixBigintToBool(j: Json): Json = {
-      val jb = JsonBuffer(j)
-      jb.insertable = j.insertable.as[Int] == 1
-      Json(jb)
+      val isInsertable =  j.insertable.as[Int] == 1
+      j ++ json"""{"insertable": $isInsertable}"""
     }
     val jbListF: Future[Seq[Json]] =
       db.prepare(

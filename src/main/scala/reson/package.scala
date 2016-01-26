@@ -1,17 +1,14 @@
-import com.twitter.finagle.{SimpleFilter, Service}
-import com.twitter.finagle.http.{Status, Response, Request}
-import com.twitter.util.Future
-import com.twitter.finagle.http.Status._
+import com.twitter.finagle.http.{Status, Response}
 
 import rapture.json._
-import rapture.json.jsonBackends.argonaut._
+import rapture.json.jsonBackends.jackson._
 
 /**
   * Created by sscarduzio on 23/12/2015.
   */
 package object reson {
 
-  val mkResp: String => Response = { str =>
+  def mkResp(str:String ) = {
     val resp = Response(Status.Ok)
     resp.setContentTypeJson
     resp.contentString = Option(str).filter(!_.isEmpty).getOrElse("{}")
@@ -19,16 +16,8 @@ package object reson {
   }
 
   def CANNED(s: Status, msg: String) = {
-    mkResp( json"""{ "status": $s, "message": $msg}""".toString)
+    val j = json"""{ "status": ${s.toString}, "message": $msg}"""
+    mkResp(j.toString)
   }
 
-  val exceptionHandlerFilter = new SimpleFilter[Request, Response] {
-    def apply(req: Request, service: Service[Request, Response]) = service(req) handle {
-      case e => {
-        println(e.getMessage)
-        e.printStackTrace
-        if (Option(e.getMessage).filter(!_.isEmpty).isDefined) CANNED(InternalServerError, e.getMessage) else CANNED(InternalServerError, e.getStackTraceString)
-      }
-    }
-  }
 }

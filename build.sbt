@@ -9,8 +9,8 @@ resolvers += "bintray-djspiewak-maven" at "https://dl.bintray.com/djspiewak/mave
 libraryDependencies ++= Seq(
   "com.twitter" %% "finagle-http" % "6.31.0",
   "com.twitter" %% "finagle-mysql" % "6.31.0",
-  "com.propensive" %% "rapture-json-argonaut" % "2.0.0-M3",
-  "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+  "com.propensive" %% "rapture-json-jackson" % "2.0.0-M3",
+  "org.specs2" %% "specs2-core" % "3.6.6-scalaz-7.2.0" % "test",
   "junit" % "junit" % "4.11" % "test"
 )
 
@@ -20,7 +20,4 @@ packMain := Map(
   "server" -> "reson.Server"
 )
 
-wartremoverWarnings ++= Warts.all
-
-scapegoatVersion := "1.1.0"
-
+scalacOptions in ThisBuild ++= Seq("-unchecked", "-deprecation")

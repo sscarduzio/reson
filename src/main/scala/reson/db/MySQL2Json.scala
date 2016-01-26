@@ -3,17 +3,18 @@ package reson.db
 /**
   * Created by sscarduzio on 23/12/2015.
   */
+
 import java.util.{Date, TimeZone}
 
 import com.twitter.finagle.exp.mysql._
 import rapture.json._
-import rapture.json.jsonBackends.argonaut._
+import rapture.json.jsonBackends.jackson._
 
 
 /**
   * Created by sscarduzio on 22/12/2015.
   */
-final case class ParsingException(msg:String)extends Exception
+final case class ParsingException(msg: String) extends Exception
 
 trait MySQL2Json {
 
@@ -32,12 +33,12 @@ trait MySQL2Json {
     case DoubleValue(d) => s"""{"$key" : $d}"""
     case BigDecimalValue(bd) => s"""{"$key" : ${bd.floatValue} }"""
     case RawValue(typ, charset, isBinary, bytes) => {
-      val parsed:String = typ match {
-        case 12|7 => new TimestampValue(tz, tz).unapply(v).map(_.getTime.toString)
+      val parsed: String = typ match {
+        case 12 | 7 => new TimestampValue(tz, tz).unapply(v).map(_.getTime.toString)
           .getOrElse(throw new ParsingException(s"cannot parse ~timestamp $v"))
-        case 10 =>  DateValue.unapply(RawValue(Type.Date,charset, isBinary,bytes)).map(_.getTime.toString)
+        case 10 => DateValue.unapply(RawValue(Type.Date, charset, isBinary, bytes)).map(_.getTime.toString)
           .getOrElse(throw new ParsingException(s"cannot parse ~date $v"))
-        case _ =>  throw new ParsingException(s"""Unsupported column type: $typ for key: $key""")
+        case _ => throw new ParsingException(s"""Unsupported column type: $typ for key: $key""")
       }
       s"""{"$key" : "$parsed" }"""
     }
@@ -49,7 +50,7 @@ trait MySQL2Json {
     val zippedMap = row.fields.zip(row.values)
     val listOfJson: IndexedSeq[String] = zippedMap.map(t => mkValue(t._1.name, t._2))
 
-    val jb = listOfJson.map(j => JsonBuffer.parse(j)).foldLeft(JsonBuffer.empty)(_ ++ _)
+    val jb = listOfJson.map(j => Json.parse(j)).foldLeft(Json.empty)(_ ++ _)
     Json(jb)
   }
 }

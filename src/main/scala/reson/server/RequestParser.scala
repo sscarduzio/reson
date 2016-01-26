@@ -4,7 +4,7 @@ import com.twitter.finagle.http.Method._
 import com.twitter.finagle.http.{HeaderMap, Request}
 import rapture.data.GeneralExtractors
 import rapture.json._
-import rapture.json.jsonBackends.argonaut._
+import rapture.json.jsonBackends.jackson._
 import reson.ParameterParser._
 import reson._
 import reson.db.MySQL
