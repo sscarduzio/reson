@@ -14,7 +14,7 @@ import rapture.json.jsonBackends.jackson._
 /**
   * Created by sscarduzio on 22/12/2015.
   */
-final case class ParsingException(msg: String) extends Exception
+final case class ParsingException(msg: String) extends Exception(msg)
 
 trait MySQL2Json {
 
@@ -22,7 +22,7 @@ trait MySQL2Json {
   val tz = TimeZone.getTimeZone("UTC")
 
   def mkValue[V <: Value](key: String, v: V): String = v match {
-
+    case NullValue => s"""{"$key": null}"""
     case StringValue(s) => s"""{"$key" : "$s" }"""
     case IntValue(i) => s"""{"$key" : $i }"""
     case LongValue(l) => s"""{"$key" : $l }"""
