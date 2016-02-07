@@ -15,9 +15,13 @@ package object reson {
     resp
   }
 
-  def CANNED(s: Status, msg: String) = {
-    val j = json"""{ "status": ${s.toString}, "message": $msg}"""
+  def CANNED(s:Status, msg:Json) = {
+    val j = json"""{ "status": ${s.reason}, "message": $msg}"""
     mkResp(j.toString)
   }
 
+  def CANNED(s: Status, msg: String) = {
+    val j = json"""{ "status": ${s.reason}, "message": $msg}"""
+    mkResp(j.toString)
+  }
 }
