@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
   "junit" % "junit" % "4.11" % "test"
 )
 
-packSettings
+enablePlugins(PackPlugin)
 
 packMain := Map(
   "server" -> "reson.Server"
