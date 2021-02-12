@@ -79,8 +79,8 @@ final case class Order(values: Seq[String]) extends MultiOp("order", values) {
   override def toString = "ORDER BY " + rules.mkString(", ")
 }
 
-final case class InOp(column:String, value:String, not: Boolean) extends Op with Negatable {
-  override def toString = s"""`$column`${isNot}IN """ + value.map(v => s"'$v'").mkString("(", ",", ")")
+final case class InOp(column:String, values:String, not: Boolean) extends Op with Negatable {
+  override def toString = s"""`$column`${isNot}IN """ + values.stripPrefix("(").stripSuffix(")").split(',').map(v => s"'$v'").mkString("(", ",", ")")
 }
 
 final case class Select(value:String) extends Op {
