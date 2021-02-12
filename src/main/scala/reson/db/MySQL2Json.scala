@@ -23,7 +23,12 @@ trait MySQL2Json {
 
   def mkValue[V <: Value](key: String, v: V): String = v match {
     case NullValue => s"""{"$key": null}"""
-    case StringValue(s) => s"""{"$key" : "$s" }"""
+    case StringValue(s) =>
+      val esc = s.replaceAll("\\\\", "\\\\\\\\")
+        .replaceAll("\r", "\\\\r")
+        .replaceAll("\n", "\\\\n")
+        .replaceAll("\"", "\\\\\"")
+      s"""{"$key" : "$esc" }"""
     case IntValue(i) => s"""{"$key" : $i }"""
     case LongValue(l) => s"""{"$key" : $l }"""
     // MySQL uses TinyInts to represent booleans
@@ -42,6 +47,7 @@ trait MySQL2Json {
       }
       s"""{"$key" : "$parsed" }"""
     }
+    case EmptyValue => s"""{"$key" : "" }"""
     case _ => throw new ParsingException(s"""Unsupported column $key => $v""")
 
   }
