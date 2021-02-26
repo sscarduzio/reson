@@ -1,23 +1,23 @@
 package reson
 
-import com.twitter.finagle.exp.mysql.{Error, ServerError}
-import com.twitter.finagle.http.Method._
-import com.twitter.finagle.http._
-import com.twitter.finagle.http.Status._
-import com.twitter.finagle.http.path._
-import com.twitter.finagle.{SimpleFilter, Http, Service}
+import com.twitter.finagle.http.Method.{Get, Options}
+import com.twitter.finagle.http.Status.{Conflict, InternalServerError, NotFound}
+import com.twitter.finagle.http.path.{/, Path, Root}
+import com.twitter.finagle.http.{Request, Response}
+import com.twitter.finagle.mysql.ServerError
+import com.twitter.finagle.{Http, Service, SimpleFilter}
 import com.twitter.util.{Await, Future}
+import org.json4s.JsonAST.JValue
+import org.json4s.JsonDSL._
 import reson.db.MySQL
-import reson.server.{RequestParser}
-import util.Transformers._
-import rapture.json._
-import rapture.json.jsonBackends.jackson._
+import reson.server.RequestParser
+import reson.util.Transformers._
 
 /**
-  * Created by sscarduzio on 23/12/2015.
-  */
+ * Created by sscarduzio on 23/12/2015.
+ */
 object Server extends App {
-  def handle(req: Request, table: String, f: String => Future[String]): Future[Response] = {
+  def handle(req: Request, table: String, f: String => Future[JValue]): Future[Response] = {
     for {
       query <- RequestParser.parse(req, table).toFuture
       qString <- query.materialize.toFuture
@@ -35,19 +35,23 @@ object Server extends App {
   }
 
   lazy val exceptionHandlerFilter = new SimpleFilter[Request, Response] {
-    def apply(req: Request, service: Service[Request, Response]) = service(req) handle {
+    def apply(req: Request, service: Service[Request, Response]): Future[Response] = {
 
-      // DUP primary key or DUP for UNIQUE column
-      case e: ServerError if (e.code == 1062 || e.code == 1169) => CANNED(Conflict, json"""{"code": ${e.code}, "message": ${e.message}, "details": ${e.sqlState}, "hint": null }""")
+      service(req) handle {
 
-      // Other SQL errors
-      case e: ServerError => CANNED(InternalServerError, json"""{"code": ${e.code}, "message": ${e.message}, "details": ${e.sqlState}, "hint": null }""")
+        // DUP primary key or DUP for UNIQUE column
+        case e: ServerError if e.code == 1062 || e.code == 1169 =>
+          CANNED(Conflict, ("code" -> e.code) ~ ("message" -> e.message) ~ ("details" -> e.sqlState) ~ ("hint" -> null))
 
-      // Reson shat the bed
-      case e => {
-        sys.error("ERROR: " + e.getMessage)
-        e.printStackTrace
-        CANNED(InternalServerError, e.getMessage)
+        // Other SQL errors
+        case e: ServerError =>
+          CANNED(InternalServerError, ("code" -> e.code) ~ ("message" -> e.message) ~ ("details" -> e.sqlState) ~ ("hint" -> null))
+
+        // Reson shat the bed
+        case e =>
+          sys.error("ERROR: " + e.getMessage)
+          e.printStackTrace()
+          CANNED(InternalServerError, e.getMessage)
       }
     }
   }

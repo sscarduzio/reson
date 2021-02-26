@@ -31,7 +31,7 @@ case object NoOp extends Op {
 
 trait Negatable {
   val not: Boolean
-  def isNot = if (not) " NOT " else " "
+  def isNot: String = if (not) " NOT " else " "
 }
 
 final case class SingleOp(column: String, value: String, key: String) extends Op {
@@ -47,11 +47,11 @@ class MultiOp(val key: String, values: Seq[String]) extends Op {
 }
 
 final case class Like(column:String, override val not:Boolean, value:String) extends SingleNegatableOp(column, not, value, "LIKE") {
- override def toString = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
+ override def toString: String = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
 }
 
 final case class ILike(column:String, override val not:Boolean, value:String) extends SingleNegatableOp(column, not, value, "COLLATE UTF8_GENERAL_CI LIKE") {
-  override def toString = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
+  override def toString: String = s"""${super.toString}""".replace("*","%") // #TODO enhancement (not in PostgREST) single wildcard (question mark) support
 }
 
 final case class Order(values: Seq[String]) extends MultiOp("order", values) {
@@ -59,15 +59,15 @@ final case class Order(values: Seq[String]) extends MultiOp("order", values) {
   // order=age.desc,height.asc
   // order=age.nullsfirst
   // order=age.desc.nullslast
-  final case class Rule(col: String, desc: Boolean = false, asc: Boolean = false, nullsFirst: Boolean = false, nullsLast: Boolean = false) {
+  case class Rule(col: String, desc: Boolean = false, asc: Boolean = false, nullsFirst: Boolean = false, nullsLast: Boolean = false) {
     if (desc && asc || nullsFirst && nullsLast) throw new Exception("invalid ordering rule")
 
-    override def toString =
+    override def toString: String =
       s"""$col ${if (desc) "DESC" else ""}${if (asc) "ASC" else ""} """ +
         s"""${if (nullsFirst) "NULLS FIRST" else ""}${if (nullsLast) "NULLS LAST" else ""}"""
   }
 
-  val rules = values.map { rule =>
+  private val rules = values.map { rule =>
     val spl = rule.split("\\.")
     spl.toList match {
       case col :: Nil => Rule(col)
@@ -76,15 +76,15 @@ final case class Order(values: Seq[String]) extends MultiOp("order", values) {
     }
   }
 
-  override def toString = "ORDER BY " + rules.mkString(", ")
+  override def toString: String = "ORDER BY " + rules.mkString(", ")
 }
 
 final case class InOp(column:String, values:String, not: Boolean) extends Op with Negatable {
-  override def toString = s"""`$column`${isNot}IN """ + values.stripPrefix("(").stripSuffix(")").split(',').map(v => s"'$v'").mkString("(", ",", ")")
+  override def toString: String = s"""`$column`${isNot}IN """ + values.stripPrefix("(").stripSuffix(")").split(',').map(v => s"'$v'").mkString("(", ",", ")")
 }
 
 final case class Select(value:String) extends Op {
-  override def toString = "SELECT " + value
+  override def toString: String = "SELECT " + value
 }
 
 // END OF ADT
@@ -94,14 +94,14 @@ object ParameterParser {
   def parseParam(kv: (String, String)): Op = parseParam(kv._1, kv._2)
 
   def parseParam(key: String, value: String): Op = {
-    def noNeg(n: Boolean) = if (n) throw new Exception("meaningless not")
+    def noNeg(n: Boolean): Unit = if (n) throw new Exception("meaningless not")
 
     @tailrec
     def parse(key: String, values: Seq[String], not: Boolean): Op = {
       (key, values) match {
         case ("select", _) => noNeg(not); Select(value)
-        case ("order", _) => noNeg(not); Order(value.split(","))
-        case (_, "not" :: v) => parse(key, v, true)
+        case ("order", _) => noNeg(not); Order(value.split(',').toIndexedSeq)
+        case (_, "not" :: v) => parse(key, v, not = true)
         case (col, "in" :: v) => InOp(col, v.head, not)
         case (col, "eq" :: v) => noNeg(not); SingleOp(col, v.head, "=")
         case (col, "gt" :: v) => noNeg(not); SingleOp(col, v.head, ">")
@@ -110,9 +110,10 @@ object ParameterParser {
         case (col, "lte" :: v) => SingleOp(col, v.head, "<=")
         case (col, "like" :: v) => Like(col, not, v.head)
         case (col, "ilike" :: v) => ILike(col, not, v.head)
-        case (x, y) => throw new Exception(s"nothing matched key=$key, value=$value")
+        case (_, _) =>
+          throw new Exception(s"nothing matched key=$key, value=$value")
       }
     }
-    parse(key, value.split("\\.").toList, false)
+    parse(key, value.split("\\.").toList, not = false)
   }
 }

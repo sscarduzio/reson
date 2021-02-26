@@ -28,7 +28,7 @@ object TwitterConverters {
   implicit class TransformableTwitterFuture[T](val tFuture: twitter.Future[T]) {
 
     def toScala: Future[T] = {
-      val promise = Promise[T]
+      val promise = Promise[T]()
       tFuture.onFailure(e => promise.failure(e))
       tFuture.onSuccess(value => promise.success(value))
       promise.future
